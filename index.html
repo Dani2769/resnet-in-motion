@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1017" />
+    <meta
+      name="description"
+      content="Explore a real residual network in 3D. Click a block to unfold its shortcut, learned branch, addition and feature maps directly in the scene."
+    />
+    <title>ResNet, in motion — explore inside the network</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%230b1017'/%3E%3Cpath d='M15 43V19h22a9 9 0 010 18H25m12 0l12 11M15 43h10V29' fill='none' stroke='%235ee7cf' stroke-width='5'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="styles/playground.css?v=30" />
+    <script src="model/model-data.js" defer></script>
+    <script src="model/inference.js" defer></script>
+    <script src="app/lesson.js?v=31" defer></script>
+    <script src="rendering/scene.js?v=30" defer></script>
+    <script src="app/controller.js?v=31" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#network-scene">Skip to the 3D network</a>
+    <header class="site-header shell">
+      <a class="brand" href="#playground" aria-label="ResNet in motion"
+        ><svg viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M5 25V7h15a6 6 0 010 12H12m8 0l7 8M5 25h7V13" /></svg
+        ><span>resnet<span class="brand-light"> / in motion</span></span></a
+      ><span class="header-note"
+        ><i class="status-dot"></i><span id="metric-accuracy">96.39%</span> test accuracy</span
+      >
+      <div class="header-actions">
+        <button id="model-info" class="text-button">About this model ↗</button>
+      </div>
+    </header>
+    <main class="shell workspace-shell">
+      <section class="workspace" id="playground" aria-labelledby="workspace-title">
+        <div class="workspace-top">
+          <div class="workspace-intro">
+            <div class="workspace-heading">
+              <i class="status-dot"></i>
+              <h1 id="workspace-title">Follow the signal.</h1>
+              <span id="view-context" class="tag">Network</span>
+            </div>
+            <p id="workspace-description">Pick a digit and follow it through the network.</p>
+          </div>
+          <div class="top-actions">
+            <button
+              id="help-button"
+              class="icon-button"
+              aria-label="Show keyboard shortcuts"
+              title="Keyboard shortcuts"
+            >
+              ?</button
+            ><button
+              id="fullscreen"
+              class="icon-button"
+              aria-label="Enter fullscreen"
+              title="Fullscreen"
+            >
+              ⛶
+            </button>
+          </div>
+        </div>
+        <div class="journey">
+          <div class="journey-copy" aria-live="polite" aria-atomic="true">
+            <div class="step-count" id="step-count">Step 01 / 19</div>
+            <div>
+              <h2 id="step-title">Start with a handwritten digit.</h2>
+              <p id="step-description"></p>
+              <button id="inspect-block" class="text-button" hidden>Expand this block ↗</button>
+            </div>
+          </div>
+          <div class="transport">
+            <div class="transport-navigation">
+              <button
+                id="restart"
+                class="icon-button"
+                aria-label="Restart journey"
+                title="Restart (R)"
+              >
+                ↺</button
+              ><button
+                id="previous"
+                class="secondary-button"
+                aria-label="Previous step"
+                title="Previous step (left arrow)"
+              >
+                ← Back</button
+              ><button id="next" class="primary-button" aria-label="Next step">Next: stem →</button>
+            </div>
+            <div class="transport-playback">
+              <button id="play" class="text-button" title="Play or pause (Space)">
+                <span aria-hidden="true">▶</span> Play walkthrough</button
+              ><label class="speed-label" for="speed"
+                >Speed<select id="speed">
+                  <option value="6200">Slow</option>
+                  <option value="4200" selected>Normal</option>
+                  <option value="2600">Quick</option>
+                </select></label
+              >
+            </div>
+          </div>
+        </div>
+        <div class="scene-layout">
+          <aside class="input-panel" aria-label="Network input">
+            <div class="panel-label"><span>INPUT</span><span class="tiny-label">8 × 8</span></div>
+            <canvas
+              id="input-image"
+              width="144"
+              height="144"
+              role="img"
+              aria-label="Selected handwritten digit"
+            ></canvas>
+            <div class="input-caption">
+              <span id="input-caption">A handwritten 6</span
+              ><span class="tiny-label" id="sample-id"></span>
+            </div>
+            <div id="digit-picker" class="digit-picker" aria-label="Choose a digit"></div>
+            <div class="sample-actions">
+              <button id="new-sample" class="text-button">↻ Another sample</button>
+            </div>
+            <p class="micro">Held-out test samples</p>
+          </aside>
+          <div class="scene-center">
+            <div class="view-toolbar">
+              <div class="segmented" aria-label="Explore the network">
+                <button id="view-overview" class="selected" aria-pressed="true">Network</button
+                ><button data-expand-block="0" aria-pressed="false">Block 01</button
+                ><button data-expand-block="1" aria-pressed="false">Block 02</button
+                ><button data-expand-block="2" aria-pressed="false">Block 03</button>
+              </div>
+              <span class="scene-hint">Open a block · drag to orbit</span>
+              <div class="camera-buttons">
+                <button id="zoom-out" aria-label="Zoom out">−</button
+                ><button id="zoom-in" aria-label="Zoom in">+</button
+                ><button
+                  id="reset-camera"
+                  aria-label="Reset network view"
+                  title="Reset network view"
+                >
+                  ⟲
+                </button>
+              </div>
+            </div>
+            <div class="expansion-controls" id="expansion-controls" hidden>
+              <div>
+                <h2 id="expanded-title">Inside residual block 01</h2>
+                <p id="expanded-description"></p>
+              </div>
+            </div>
+            <div
+              id="block-stages"
+              class="block-stages"
+              role="group"
+              aria-label="Stages inside this residual block"
+              hidden
+            >
+              <button
+                data-phase="split"
+                aria-pressed="false"
+                aria-label="Block stage 1: split the input"
+              >
+                <span>1</span> Split</button
+              ><button
+                data-phase="conv1"
+                aria-pressed="false"
+                aria-label="Block stage 2: first convolution and ReLU"
+              >
+                <span>2</span> Conv 1</button
+              ><button
+                data-phase="branch"
+                aria-pressed="false"
+                aria-label="Block stage 3: learned change"
+              >
+                <span>3</span> Conv 2 · F(x)</button
+              ><button
+                data-phase="add"
+                aria-pressed="false"
+                aria-label="Block stage 4: add both contributions"
+              >
+                <span>4</span> Add</button
+              ><button
+                data-phase="relu"
+                aria-pressed="false"
+                aria-label="Block stage 5: apply ReLU"
+              >
+                <span>5</span> ReLU
+              </button>
+            </div>
+
+            <canvas
+              id="network-scene"
+              tabindex="0"
+              role="img"
+              aria-label="Interactive 3D residual network. Click a residual block to unfold its input, convolutional branch, identity shortcut, sum and output directly in this scene. Keys 1, 2, 3 open blocks; Escape returns to the whole network."
+            ></canvas>
+            <div class="inspection-hud" id="inspection-hud" hidden>
+              <div class="hud-top">
+                <div class="hud-identity">
+                  <span id="value-context" class="tiny-label">INSPECT ONE VALUE</span
+                  ><span id="selection-address" class="selection-address"
+                    >Channel 0 · row 3 · col 3</span
+                  >
+                </div>
+                <div
+                  id="pixel-equation"
+                  class="pixel-equation"
+                  title="Displayed values are rounded to three decimal places."
+                  aria-live="polite"
+                  aria-atomic="true"
+                ></div>
+              </div>
+              <p id="operation-caption" class="operation-caption"></p>
+              <div class="hud-controls">
+                <div class="channel-picker">
+                  <span
+                    id="channel-label"
+                    class="tiny-label"
+                    title="Each channel is a learned feature map. Selecting one changes only the highlighted measurement."
+                    >CHANNEL</span
+                  >
+                  <div id="channels" aria-label="Feature channel"></div>
+                </div>
+                <div class="pixel-selectors">
+                  <label
+                    >Row <input id="pixel-row" type="range" min="0" max="7" value="3" /><output
+                      id="row-value"
+                      >3</output
+                    ></label
+                  ><label
+                    >Col <input id="pixel-col" type="range" min="0" max="7" value="3" /><output
+                      id="col-value"
+                      >3</output
+                    ></label
+                  >
+                </div>
+                <div class="operation-actions">
+                  <button id="show-clipped-cell" class="text-button" hidden>
+                    Show a clipped value</button
+                  ><button id="replay-operation" class="text-button" hidden>
+                    Replay addition ↻
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="scene-bottom">
+              <div class="legend">
+                <span><i class="legend-mark purple-bg"></i>Learned branch</span
+                ><span><i class="legend-mark mint-bg"></i>Identity shortcut</span
+                ><span><i class="legend-mark amber-bg"></i>Add + ReLU</span
+                ><span><i class="legend-mark coral-bg"></i>Negative</span>
+              </div>
+              <button id="labels-toggle" class="text-button" aria-pressed="true">Labels on</button>
+            </div>
+            <p class="scene-footnote" id="scene-footnote"></p>
+          </div>
+          <aside class="prediction-panel" aria-labelledby="prediction-label">
+            <div class="panel-label">
+              <span id="prediction-label">PREDICTION</span><i class="status-dot"></i>
+            </div>
+            <div class="prediction-number" id="prediction-number">6</div>
+            <div class="prediction-caption">
+              <span id="confidence">—</span><span class="tiny-label">MODEL PROBABILITY</span>
+            </div>
+            <details class="prediction-details">
+              <summary>All digit probabilities</summary>
+              <div
+                id="probability-bars"
+                class="probability-bars"
+                aria-label="Probabilities for all ten digits"
+              ></div>
+            </details>
+            <div class="result-status" id="result-status"></div>
+          </aside>
+        </div>
+        <nav class="timeline-wrap" aria-label="Network journey">
+          <div class="timeline-heading">
+            <span class="tiny-label">WALKTHROUGH</span><span>Jump to a step</span>
+          </div>
+          <div class="timeline" id="timeline" aria-label="Jump to a forward-pass step"></div>
+        </nav>
+      </section>
+    </main>
+    <dialog id="model-dialog" aria-labelledby="model-title">
+      <div class="dialog-header">
+        <h2 id="model-title">About the model</h2>
+        <button id="close-model" class="icon-button" aria-label="Close model information">×</button>
+      </div>
+      <div class="model-notes">
+        <h3>The residual block</h3>
+        <p>
+          <strong>y = ReLU(x + F(x))</strong>. The shortcut copies the input x. The branch learns
+          F(x). ReLU clips negative sums to zero. Both paths use 8 × 8 × 8 tensors.
+        </p>
+        <p>
+          The shortcut gives gradients a direct path that helps train deep networks. ReLU can still
+          block it.
+        </p>
+        <h3>Architecture</h3>
+        <p>
+          The stem applies Conv 1→8 and ReLU. Three residual blocks each apply Conv 8→8 → ReLU →
+          Conv 8→8 → add x → ReLU. The classifier flattens the maps into 512 values, computes 10
+          scores, and applies softmax. Convolutions use 3 × 3 kernels, stride 1, and zero padding 1.
+          This teaching model has 8,714 parameters.
+        </p>
+        <h3>Training</h3>
+        <p id="training-description"></p>
+        <h3>Reading the visualization</h3>
+        <p>
+          The display uses actual model activations. Pick a channel and cell to trace one value.
+          Input, change, sum, and output share a colour scale. Conv 1 scales separately. Motion
+          illustrates the computation.
+        </p>
+        <h3>Limitations</h3>
+        <p>
+          Only the final classifier predicts classes. Accuracy applies to this test split, and
+          softmax probabilities are uncalibrated.
+        </p>
+        <div class="references">
+          <a
+            href="https://openaccess.thecvf.com/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html"
+            target="_blank"
+            rel="noreferrer"
+            >He et al. · Residual learning ↗</a
+          ><a
+            href="https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html"
+            target="_blank"
+            rel="noreferrer"
+            >The handwritten digits dataset ↗</a
+          >
+        </div>
+      </div>
+    </dialog>
+    <dialog id="help-dialog" aria-labelledby="help-title">
+      <div class="dialog-header">
+        <h2 id="help-title">Controls</h2>
+        <button id="close-help" class="icon-button" aria-label="Close shortcuts">×</button>
+      </div>
+      <dl class="shortcut-list">
+        <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt>
+        <dd>Open a block</dd>
+        <dt><kbd>Esc</kbd></dt>
+        <dd>Return to the network</dd>
+        <dt><kbd>Space</kbd></dt>
+        <dd>Play or pause</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt>
+        <dd>Previous or next step</dd>
+        <dt><kbd>R</kbd></dt>
+        <dd>Restart</dd>
+        <dt>Mouse drag</dt>
+        <dd>Orbit the scene</dd>
+        <dt><kbd>Ctrl</kbd> + scroll</dt>
+        <dd>Zoom</dd>
+        <dt>Arrows on the canvas</dt>
+        <dd>Select a cell inside a block</dd>
+      </dl>
+      <p class="micro">
+        Reduced-motion mode shows results immediately. Swipe to scroll on touchscreens.
+      </p>
+    </dialog>
+    <div id="app-error" class="app-error" hidden role="alert"></div>
+    <noscript
+      ><p class="app-error">
+        Enable JavaScript to run the network and explore its feature maps.
+      </p></noscript
+    >
+  </body>
+</html>
