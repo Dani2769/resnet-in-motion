@@ -1,0 +1,12 @@
+dist/
+node_modules/
+.git/
+.openai/
+.training-cache/
+.sites-runtime/
+src/model/model-data.js
+tests/*fixtures.json
+reports/
+ResNet_3D_Playground.html
+*.zip
+*.tar.gz

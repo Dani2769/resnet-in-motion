@@ -1,0 +1,19 @@
+{
+  "name": "resnet-in-motion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An interactive, browser-based explanation of a trained residual digit classifier.",
+  "scripts": {
+    "build": "python scripts/build-playground.py",
+    "check": "node scripts/check-source.mjs",
+    "pretest": "python scripts/build-playground.py",
+    "test": "node --test tests/*.test.cjs",
+    "test:current": "node --test tests/*.test.cjs",
+    "format": "prettier --write src/index.html src/app/*.js src/model/inference.js src/rendering/*.js src/styles/*.css tools/*.js tests/*.cjs scripts/*.mjs README.md package.json package-lock.json .prettierrc.json",
+    "format:check": "prettier --check src/index.html src/app/*.js src/model/inference.js src/rendering/*.js src/styles/*.css tools/*.js tests/*.cjs scripts/*.mjs README.md package.json package-lock.json .prettierrc.json",
+    "package:source": "python scripts/package-source.py"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}
